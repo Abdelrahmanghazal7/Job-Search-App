@@ -1,13 +1,8 @@
 import { Router } from "express";
-import * as massage from "./job.controller.js";
-import { auth } from "../../middleware/auth.js";
+import { getApps } from "./application.controller.js";
 
 const router = Router();
 
-router.post("/", auth, massage.addMassage);
-
-router.get("/", massage.getMassages);
-
-router.delete("/:id", auth, massage.deleteMassage);
+router.get("/getApps", getApps);
 
 export default router;

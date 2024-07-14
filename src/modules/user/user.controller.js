@@ -1,6 +1,9 @@
-import userModel from "../../../db/models/userModel.model.js";
+import userModel from "../../../db/models/user.model.js";
+import companyModel from "../../../db/models/company.model.js";
+import jopModel from "../../../db/models/job.model.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { sendEmail } from "../../service/sendEmail.js";
 import { asyncHandler } from "../../utils/globalErrorHandling.js";
 import { AppError } from "../../utils/classError.js";
 
@@ -8,32 +11,50 @@ import { AppError } from "../../utils/classError.js";
 
 const registration = async (req, res, next) => {
   const {
-    username,
+    firstName,
+    lastName,
     email,
     password,
     recoveryEmail,
-    DOB,
+    dateOfBirth,
     mobileNumber,
     role,
     status,
   } = req.body;
 
   // Check if the user already exists
-  const userExist = await userModel.findOne({ email });
+  const userExist = await userModel.findOne({
+    $or: [{ email }, { recoveryEmail }],
+  });
   if (userExist) {
     return next(new AppError("user already exist", 400));
   }
 
+  // Send email to confirm signing
+  const token = jwt.sign({ email }, process.env.JWT_SECRET);
+  const link = `http://localhost:3000/users/confirmEmail/${token}`;
+
+  const checkSendEmail = await sendEmail(
+    email,
+    "hi",
+    `<a href=${link}>Confirm Email</a>`
+  );
+  if (!checkSendEmail) {
+    return next(new AppError("email not send", 400));
+  }
+
   // Hash the password
-  const hash = bcrypt.hashSync(password, 8);
+  const hash = bcrypt.hashSync(password, Number(process.env.SALT_ROUNDS));
 
   // Create a new user
   const user = await userModel.create({
-    username,
+    firstName,
+    lastName,
+    username: firstName + " " + lastName,
     email,
     password: hash,
     recoveryEmail,
-    DOB: new Date(DOB),
+    dateOfBirth: new Date(dateOfBirth),
     mobileNumber,
     role,
     status,
@@ -44,15 +65,36 @@ const registration = async (req, res, next) => {
 
 export const signUp = asyncHandler(registration);
 
+// =========================================== CONFIRM EMAIL ===========================================
+
+const confirm = async (req, res, next) => {
+  const { token } = req.params;
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  if (!decoded?.email) {
+    return next(new AppError("invalid payload", 400));
+  }
+  const user = await userModel.findOneAndUpdate(
+    { email: decoded.email, confirmed: false },
+    { confirmed: true },
+    { new: true }
+  );
+  if (!user) {
+    return next(new AppError("user not found or already confirmed", 400));
+  }
+  res.status(200).json({ msg: "done", user });
+};
+
+export const confirmEmail = asyncHandler(confirm);
+
 // =========================================== LOGIN ===========================================
 
 const login = async (req, res, next) => {
-  const { emailOrRecoveryEmailOrMobileNumber, password } = req.body;
+  const { identifier, password } = req.body;
   const user = await userModel.findOne({
     $or: [
-      { email: emailOrRecoveryEmailOrMobileNumber },
-      { recoveryEmail: emailOrRecoveryEmailOrMobileNumber },
-      { mobileNumber: emailOrRecoveryEmailOrMobileNumber },
+      { email: identifier },
+      { recoveryEmail: identifier },
+      { mobileNumber: identifier },
     ],
   });
 
@@ -69,221 +111,191 @@ const login = async (req, res, next) => {
   // Generate JWT token
   const payload = {
     user: {
-      id: userModel.id,
+      id: user._id,
       email,
     },
   };
-  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" });
+  const token = jwt.sign(payload, process.env.JWT_SECRET);
   res.status(200).json({ token });
 
   // Update user status to 'online'
-  userModel.status = "online";
-  await userModel.save();
+  await userModel.findOneAndUpdate({ email: user.email }, { status: "online" });
 };
 
 export const signIn = asyncHandler(login);
 
-// =========================================== UPDATE ===========================================
+// =========================================== UPDATE USER ===========================================
 
 const update = async (req, res, next) => {
+  const {
+    firstName,
+    lastName,
+    email,
+    mobileNumber,
+    recoveryEmail,
+    dateOfBirth,
+  } = req.body;
 
-  const { id } = req.params;
+  const emailExist = await userModel.findOne({ email });
+  if (emailExist) {
+    next(new AppError("Email already exists", 400));
+  }
 
-  const { username, email, mobileNumber, recoveryEmail, DOB} =
-    req.body;
+  const mobileExist = await userModel.findOne({ mobileNumber });
+  if (mobileExist) {
+    next(new AppError("Mobile Number already exists", 400));
+  }
 
-    // Check if the updated email or mobileNumber already exists for another user
-    if (email) {
-      const existingUserWithEmail = await userModel.findOne({ email });
-      if (existingUserWithEmail && existingUserWithEmail._id !== id) {
-        return res.status(400).json({ error: "Email already exists." });
-      }
-    }
+  const data = await userModel.findByIdAndUpdate(
+    req.user.id,
+    {
+      firstName,
+      lastName,
+      email,
+      mobileNumber,
+      recoveryEmail,
+      dateOfBirth: new Date(dateOfBirth),
+    },
+    { new: true }
+  );
+  if (!data) {
+    next(new AppError("User not found", 404));
+  }
 
-    if (mobileNumber) {
-      const existingUserWithMobile = await userModel.findOne({ mobileNumber });
-      if (existingUserWithMobile && existingUserWithMobile._id !== id) {
-        return res.status(400).json({ error: "Mobile number already exists." });
-      }
-    }
-
-    // Update user data
-    const updatedFields = {};
-    if (username) updatedFields.username = username;
-    if (email) updatedFields.email = email;
-    if (mobileNumber) updatedFields.mobileNumber = mobileNumber;
-    if (recoveryEmail) updatedFields.recoveryEmail = recoveryEmail;
-    if (DOB) updatedFields.DOB = new Date(DOB);
-
-    const updatedUser = await userModel.findByIdAndUpdate({ _id: id }, updatedFields, {
-      new: true,
-    });
-
-    if (!updatedUser) {
-      return res.status(404).json({ error: "User not found." });
-    }
-
-    res.json(updatedUser);
+  return res.status(200).json({ msg: "done", data });
 };
 
 export const updateUser = asyncHandler(update);
 
-// =========================================== DELETE ===========================================
+// =========================================== DELETE USER ===========================================
 
-const deleteU = async (req, res, next) => {
+export const deleteUser = asyncHandler(async (req, res, next) => {
+  const deletedUser = await userModel.findByIdAndDelete(req.user.id);
+
+  if (!deletedUser) {
+    return res.status(404).json({ error: "User not found." });
+  }
+
+  if (user.role == "company_HR") {
+    await companyModel.findOneAndDelete({ companyHR: user.id }); // delete his company
+    await jopModel.deleteMany({ addedBy: req.user.id }); // delete related jobs
+  }
+
+  res.json({ message: "User deleted successfully." });
+});
+
+// =========================================== GET USER DATA ===========================================
+
+export const getUserData = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
 
-    // Delete user
-    const deletedUser = await userModel.findByIdAndDelete({ _id: id });
+  // Fetch user data
+  const user = await userModel.findById({ _id: id });
 
-    if (!deletedUser) {
-      return res.status(404).json({ error: "User not found." });
-    }
-
-    res.json({ message: "User deleted successfully." });
-};
-
-export const deleteUser = asyncHandler(deleteU);
-
-// =========================================== user account data ===========================================
-
-router.get("/me", authMiddleware, async (req, res) => {
-  const userId = req.userModel.id;
-
-  try {
-    // Fetch user data
-    const user = await userModel.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found." });
-    }
-
-    res.json(user);
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Server error");
+  if (!user) {
+    return res.status(404).json({ error: "User not found." });
   }
+
+  res.json(user);
 });
 
+// =========================================== UPDATE PASSWORD ===========================================
 
-
-/**
- * Get profile data for another userModel.
- * @param {Request} req - Express request object
- * @param {Response} res - Express response object
- */
-router.get("/profile/:userId", async (req, res) => {
-  const userId = req.params.userId;
-
-  try {
-    // Fetch user data by userId
-    const user = await userModel.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found." });
-    }
-
-    res.json(user);
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Server error");
-  }
-});
-
-/**
- * Update user password.
- * @param {Request} req - Express request object
- * @param {Response} res - Express response object
- */
-router.put("/update-password", authMiddleware, async (req, res) => {
-  const userId = req.userModel.id;
+export const updatePassword = asyncHandler(async (req, res, next) => {
   const { currentPassword, newPassword } = req.body;
 
-  try {
-    // Fetch user by userId
-    const user = await userModel.findById(userId);
+  // Fetch user by userId
+  const user = await userModel.findById(req.user.id);
 
-    if (!user) {
-      return res.status(404).json({ error: "User not found." });
-    }
-
-    // Check current password
-    const isMatch = await bcrypt.compare(currentPassword, userModel.password);
-    if (!isMatch) {
-      return res.status(401).json({ error: "Invalid current password." });
-    }
-
-    // Hash the new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // Update password
-    userModel.password = hashedPassword;
-    await userModel.save();
-
-    res.json({ message: "Password updated successfully." });
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Server error");
+  if (!user) {
+    return res.status(404).json({ error: "User not found." });
   }
+
+  // Check current password
+  const isMatch = await bcrypt.compare(currentPassword, user.password);
+  if (!isMatch) {
+    return res.status(401).json({ error: "Invalid current password." });
+  }
+
+  // Hash the new password
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  // Update password
+  req.user.password = hashedPassword;
+  await req.user.save();
+
+  res.json({ message: "Password updated successfully." });
 });
 
-/**
- * Forget password - Reset password.
- * @param {Request} req - Express request object
- * @param {Response} res - Express response object
- */
-router.put("/forget-password", async (req, res) => {
+// =========================================== FORGET PASSWORD ===========================================
+
+export const forgetPassword = asyncHandler(async (req, res, next) => {
   const { identifier, newPassword } = req.body;
 
-  try {
-    // Find user by email, recoveryEmail, or mobileNumber
-    let user = await userModel.findOne({
-      $or: [
-        { email: identifier },
-        { recoveryEmail: identifier },
-        { mobileNumber: identifier },
-      ],
-    });
+  // Find user by email, recoveryEmail, or mobileNumber
+  let user = await userModel.findOne({
+    $or: [
+      { email: identifier },
+      { recoveryEmail: identifier },
+      { mobileNumber: identifier },
+    ],
+  });
 
-    if (!user) {
-      return res.status(404).json({ error: "User not found." });
-    }
-
-    // Hash the new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // Update password
-    userModel.password = hashedPassword;
-    await userModel.save();
-
-    res.json({ message: "Password updated successfully." });
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Server error");
+  if (!user) {
+    return res.status(404).json({ error: "User not found." });
   }
+
+  // Hash the new password
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  // Update password
+  req.user.password = hashedPassword;
+  await req.user.save();
+
+  res.json({ message: "Password updated successfully." });
 });
 
-/**
- * Get all accounts associated to a specific recovery Email.
- * @param {Request} req - Express request object
- * @param {Response} res - Express response object
- */
-router.get("/accounts-by-recovery-email", async (req, res) => {
-  const { recoveryEmail } = req.query;
+// =========================================== RESET PASSWORD ===========================================
 
-  try {
-    // Find all users with the given recoveryEmail
-    const users = await userModel.find({ recoveryEmail });
+export const resetPassword = asyncHandler(async (req, res, next) => {
+  let { token } = req.params;
 
-    if (!users || users.length === 0) {
-      return res
-        .status(404)
-        .json({ error: "No accounts found with the provided recovery email." });
-    }
+  let { id } = jwt.verify(token, process.env.JWT_SECRET);
 
-    res.json(users);
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Server error");
+  let { password } = req.body;
+
+  let regx =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+  if (!regx.test(password)) {
+    next(
+      new AppError(
+        "Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, one number, and one special character",
+        400
+      )
+    );
   }
+
+  await userModel.findByIdAndUpdate(id, {
+    password: bcrypt.hashSync(password, Number(process.env.SALT_ROUNDS)),
+  });
+
+  return res.status(200).json({ msg: "password reset successfully" });
+});
+
+// =========================================== GET ALL USERS RECOVERY EMAIL ===========================================
+
+export const GetAllRecoveryEmail = asyncHandler(async (req, res, next) => {
+  const { recoveryEmail } = req.body;
+
+  // Find all users with the given recoveryEmail
+  const users = await userModel.find({ recoveryEmail });
+
+  if (!users || users.length === 0) {
+    return res
+      .status(400)
+      .json({ error: "No accounts found with the provided recovery email." });
+  }
+
+  res.status(200).json(users);
 });

@@ -1,40 +1,84 @@
-import massageModel from "../../../db/models/massage.model.js";
-import { asyncHandler } from "../../utils/globalErrorHandling.js";
+import companyModel from "../../../db/models/company.model.js";
+import jopModel from "../../../db/models/job.model.js";
+import applicationModel from "../../../db/models/application.model.js";
 import { AppError } from "../../utils/classError.js";
+import { asyncHandler } from "../../utils/globalErrorHandling.js";
 
-// =========================================== ADD MASSAGE ===========================================
+// =========================================== ADD COMPANY ===========================================
 
-const addMsge = async (req, res, next) => {
-  const { content } = req.body;
-  const massage = await massageModel.create({
-    content,
-    receiverId: req.user.id,
-  });
-  return res.status(201).json({ msg: "done", massage });
-};
+export const addCompany = asyncHandler(async (req, res, next) => {
+  req.body.companyHR = req.user._id;
+  let company = await companyModel.create(req.body);
+  return res.status(201).json({ msg: "Company added successfully", company });
+});
 
-export const addMassage = asyncHandler(addMsge);
+// =========================================== UPDATE COMPANY ===========================================
 
-// =========================================== GET MASSAGES ===========================================
-
-const getMsges = async (req, res, next) => {
-  const massages = await massageModel.find({});
-  return res.status(200).send(massages);
-};
-
-export const getMassages = asyncHandler(getMsges);
-
-// =========================================== DELETE MASSAGE ===========================================
-
-const deleteMsge = async (req, res, next) => {
-  const { id } = req.params;
-  const massage = await massageModel.findByIdAndDelete({ _id: id });
-  if (!massage) {
-    return next(
-      new AppError("massage not found or you are not authorized", 400)
-    );
+export const updateCompany = asyncHandler(async (req, res, next) => {
+  let id = req.params.id;
+  let company = await companyModel.findById(id);
+  if (!company) {
+    return next(new AppError("Company not found", 404));
   }
-  return res.status(200).json({ msg: "Deleted" });
-};
+  if (company.companyHR.toString() != req.user._id) {
+    return next(new AppError("unauthrezied", 401));
+  }
+  company = await companyModel.findByIdAndUpdate(id, req.body, { new: true });
+  return res.status(200).json({ msg: "Company updated successfully", company });
+});
 
-export const deleteMassage = asyncHandler(deleteMsge);
+// =========================================== DELETE COMPANY ===========================================
+
+export const deleteCompany = asyncHandler(async (req, res, next) => {
+  let id = req.params.id;
+  let company = await companyModel.findById(id);
+  if (!company) {
+    return next(new AppError("Company not found", 404));
+  }
+  if (company.companyHR.toString() != req.user._id) {
+    return next(new AppError("unauthrezied", 401));
+  }
+  company = await companyModel.findByIdAndDelete(id, req.body, { new: true });
+  await jopModel.deleteMany({ company: company.id }); // delete related jops
+  return res.status(200).json({ msg: "Company deleted successfully", company });
+});
+
+// =========================================== GET COMPANY ===========================================
+
+export const getCompany = asyncHandler(async (req, res, next) => {
+  let id = req.params.id;
+  let company = await companyModel.findById(id);
+  if (!company) {
+    return next(new AppError("Company not found", 404));
+  }
+
+  if (company.companyHR.toString() != req.user._id) {
+    return next(new AppError("unauthrezied", 401));
+  }
+
+  let jops = await jopModel.find({ addedBy: company.companyHR });
+  return res
+    .status(200)
+    .json({ msg: "Company deleted successfully", company, jops });
+});
+
+// =========================================== GET COMPANY BY NAME ===========================================
+
+export const companyWithName = asyncHandler(async (req, res, next) => {
+  let name = req.query.name;
+  let company = await companyModel.find({});
+  let companies = company.filter((c) =>
+    c.companyName.toLowerCase().includes(name.toLowerCase())
+  );
+  res.status(200).json({ msg: "Company", companies });
+});
+
+// =========================================== GET APPLICATIONS ===========================================
+
+export const applications = asyncHandler(async (req, res, next) => {
+  let company = await companyModel.findOne({ companyHR: req.user._id });
+  let applications = await applicationModel
+    .find({ combanyId: company._id })
+    .populate("userId");
+  res.status(200).json({ msg: "Applications", applications });
+});

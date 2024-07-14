@@ -1,8 +1,8 @@
 import express from "express";
 import userRouter from "./src/modules/user/user.routes.js";
-import jobRouter from "./src/modules/job/job.controller.js";
-import companyRouter from "./src/modules/company/company.controller.js";
-import applicationRouter from "./src/modules/application/application.controller.js";
+import jobRouter from "./src/modules/job/job.routes.js";
+import companyRouter from "./src/modules/company/company.routes.js";
+import applicationRouter from "./src/modules/application/application.routes.js";
 import connectionDB from "./db/connectionDB.js";
 import { AppError } from "./src/utils/classError.js";
 import { globalErrorHandling } from "./src/utils/globalErrorHandling.js";
@@ -16,13 +16,13 @@ connectionDB();
 
 app.use(express.json());
 
-app.use("/user", userRouter);
+app.use("/users", userRouter);
 
-app.use("/job", jobRouter);
+app.use("/jobs", jobRouter);
 
-app.use("/company", companyRouter);
+app.use("/companies", companyRouter);
 
-app.use("/application", applicationRouter);
+app.use("/applications", applicationRouter);
 
 app.use("*", (req, res, next) => {
   return next(new AppError(`invalid url ${req.originalUrl}`, 404));
