@@ -19,7 +19,7 @@ export const signUpValidation = {
 
 export const signInValidation = {
   body: joi.object({
-    email: joi.string().email().required(),
+    identifier: joi.string().email().required(),
     password: joi
       .string()
       .pattern(new RegExp(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/))
@@ -52,7 +52,8 @@ export const updatePasswordValidation = {
 
 export const resetPasswordValidation = {
   body: joi.object({
-    password: joi
+    identifier: joi.string().email().required(),
+    newPassword: joi
       .string()
       .min(8)
       .pattern(

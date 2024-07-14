@@ -9,18 +9,18 @@ import { multerHost } from "./cloudinary/multer.js";
 let roles = ["user", "company_HR"];
 let router = Router();
 
-router.post( "/addJob", auth, role(["company_HR"]), validation(addJobSchema), jobs.addJob);
+router.post( "/add", auth, role(["company_HR"]), validation(addJobSchema), jobs.addJob);
 
-router.put( "/updateJob/:id", auth, role(["company_HR"]), validation(updateJobSchema), jobs.updateJob);
+router.put( "/update/:id", auth, role(["company_HR"]), validation(updateJobSchema), jobs.updateJob);
 
-router.delete("/deleteJob/:id", auth, role(["company_HR"]), jobs.deleteJob);
+router.delete("/delete/:id", auth, role(["company_HR"]), jobs.deleteJob);
 
-router.get("/getAllJobs/", auth, role(roles), jobs.getAllJobs);
+router.get("/all", auth, role(roles), jobs.getAllJobs);
 
-router.get("/getComapnyJobs/:id", auth, role(roles), jobs.getCompanyJobs);
+router.get("/comapny/:id", auth, role(roles), jobs.getCompanyJobs);
 
-router.get("/getFilteredJobs", auth, role(roles), jobs.getFilteredJobs);
+router.get("/filter", auth, role(roles), jobs.getFilteredJobs);
 
-router.post("/applayJob/:jobid", auth, role(["user"]), multerHost().single("cv"), jobs.applyJob);
+router.post("/applay/:jobid", auth, role(["user"]), multerHost().single("cv"), jobs.applyJob);
 
 export default router;

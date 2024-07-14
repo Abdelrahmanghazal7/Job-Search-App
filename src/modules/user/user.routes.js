@@ -8,22 +8,20 @@ const router = Router();
 
 router.post("/signUp", validation(signUpValidation), users.signUp);
 
-router.post("/login", validation(signInValidation), users.signIn);
+router.post("/signIn", validation(signInValidation), users.signIn);
 
 router.get("/confirmEmail/:token", users.confirmEmail);
 
-router.put('/updateUser',auth, users.updateUser)
+router.put('/update',auth, users.updateUser)
 
 router.put('/updatePassword', auth, validation(updatePasswordValidation), users.updatePassword)
 
-router.delete('/deleteUser', auth, users.deleteUser)
+router.delete('/delete', auth, users.deleteUser)
 
 router.get('/getOtherData/:id', auth, users.getUserData)
 
-router.post('/forgetPassword/', users.forgetPassword)
+router.post('/forgetPassword/', validation(resetPasswordValidation), users.forgetPassword)
 
-router.post('/resetPassword/:token',validation(resetPasswordValidation), users.resetPassword)
-
-router.post('/GetAllRecoveryEmail', users.GetAllRecoveryEmail)
+router.post('/recoveryEmail', auth, users.GetAllRecoveryEmail)
 
 export default router;

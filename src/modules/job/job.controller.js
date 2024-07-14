@@ -9,7 +9,7 @@ import cloudinary from "./cloudinary/cloudinary.js";
 
 export const addJob = asyncHandler(async (req, res, next) => {
   req.body.addedBy = req.user._id;
-  let company = await companyModel.findOne({ companyHR: req.user._id });
+  const company = await companyModel.findOne({ companyHR: req.user._id });
   if (!company) return next(new AppError("Couldn't find company", 404));
   req.body.company = company._id;
   const newJob = await jobModel.create(req.body);
@@ -19,7 +19,7 @@ export const addJob = asyncHandler(async (req, res, next) => {
 // =========================================== UPDATE JOB ===========================================
 
 export const updateJob = asyncHandler(async (req, res, next) => {
-  let id = req.params.id;
+  const {id} = req.params;
   const newJob = await jobModel.findByIdAndUpdate(id, req.body, { new: true });
   return res.status(201).json(newJob);
 });
@@ -27,7 +27,7 @@ export const updateJob = asyncHandler(async (req, res, next) => {
 // =========================================== DELETE JOB ===========================================
 
 export const deleteJob = asyncHandler(async (req, res, next) => {
-  let id = req.params.id;
+  const {id} = req.params;
   const job = await jobModel.findByIdAndDelete(id);
   return res.status(201).json(job);
 });
@@ -39,10 +39,10 @@ export const getAllJobs = asyncHandler(async (req, res, next) => {
   return res.status(201).json(jobs);
 });
 
-// =========================================== ADD COMPANY JOBS ===========================================
+// =========================================== GET COMPANY JOBS ===========================================
 
 export const getCompanyJobs = asyncHandler(async (req, res, next) => {
-  let companyId = req.params.id;
+  const companyId = req.params.id;
   const jobs = await jobModel.find({ company: companyId }).populate("company");
   return res.status(201).json(jobs);
 });
@@ -50,7 +50,7 @@ export const getCompanyJobs = asyncHandler(async (req, res, next) => {
 // =========================================== GET FILTERED JOB ===========================================
 
 export const getFilteredJobs = asyncHandler(async (req, res, next) => {
-  let query = req.query;
+  const query = req.query;
   const jobs = await jobModel.find(query);
   return res.status(201).json(jobs);
 });
@@ -58,16 +58,16 @@ export const getFilteredJobs = asyncHandler(async (req, res, next) => {
 // =========================================== APPLY JOB ===========================================
 
 export const applyJob = asyncHandler(async (req, res, next) => {
-  let jobId = req.params.jobid;
-  let userId = req.user._id;
-  let job = await jobModel.findById(jobId);
-  let companyId = job.company;
-  let data = await cloudinary.uploader.upload(req.file.path, {
+  const jobId = req.params.jobid;
+  const userId = req.user._id;
+  const job = await jobModel.findById(jobId);
+  const companyId = job.company;
+  const data = await cloudinary.uploader.upload(req.file.path, {
     folder: "cvs",
     resource_type: "raw",
   });
-  let userResume = data.secure_url;
-  let { userTechSkills, userSoftSkills } = req.body;
+  const userResume = data.secure_url;
+  const { userTechSkills, userSoftSkills } = req.body;
   const application = await applicationModel.create({
     jobId,
     companyId,

@@ -19,7 +19,6 @@ const registration = async (req, res, next) => {
     dateOfBirth,
     mobileNumber,
     role,
-    status,
   } = req.body;
 
   // Check if the user already exists
@@ -57,7 +56,6 @@ const registration = async (req, res, next) => {
     dateOfBirth: new Date(dateOfBirth),
     mobileNumber,
     role,
-    status,
   });
 
   res.status(200).json({ msg: "done", user });
@@ -245,6 +243,31 @@ export const forgetPassword = asyncHandler(async (req, res, next) => {
     return res.status(404).json({ error: "User not found." });
   }
 
+  await userModel.findOneAndUpdate(
+    {
+      $or: [
+        { email: identifier },
+        { recoveryEmail: identifier },
+        { mobileNumber: identifier },
+      ],
+    },
+    { confirmed: false },
+    { new: true }
+  );
+
+  // Send email to confirm signing
+  const token = jwt.sign({ email }, process.env.JWT_SECRET);
+  const link = `http://localhost:3000/users/confirmEmail/${token}`;
+
+  const checkSendEmail = await sendEmail(
+    email,
+    "hi",
+    `<a href=${link}>Confirm Email</a>`
+  );
+  if (!checkSendEmail) {
+    return next(new AppError("email not send", 400));
+  }
+
   // Hash the new password
   const hashedPassword = await bcrypt.hash(newPassword, 10);
 
@@ -252,35 +275,7 @@ export const forgetPassword = asyncHandler(async (req, res, next) => {
   req.user.password = hashedPassword;
   await req.user.save();
 
-  res.json({ message: "Password updated successfully." });
-});
-
-// =========================================== RESET PASSWORD ===========================================
-
-export const resetPassword = asyncHandler(async (req, res, next) => {
-  let { token } = req.params;
-
-  let { id } = jwt.verify(token, process.env.JWT_SECRET);
-
-  let { password } = req.body;
-
-  let regx =
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-
-  if (!regx.test(password)) {
-    next(
-      new AppError(
-        "Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, one number, and one special character",
-        400
-      )
-    );
-  }
-
-  await userModel.findByIdAndUpdate(id, {
-    password: bcrypt.hashSync(password, Number(process.env.SALT_ROUNDS)),
-  });
-
-  return res.status(200).json({ msg: "password reset successfully" });
+  res.json({ message: "Password reset successfully." });
 });
 
 // =========================================== GET ALL USERS RECOVERY EMAIL ===========================================

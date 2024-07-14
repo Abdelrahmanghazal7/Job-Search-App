@@ -8,16 +8,16 @@ import { addCompanySchema, updateCompanySchema } from "./company.validation.js";
 let roles = ['user', 'company_HR']
 let router = Router()
 
-router.post('/addCompany',auth, role(["company_HR"]), validation(addCompanySchema), companies.addCompany);
+router.post('/add',auth, role(["company_HR"]), validation(addCompanySchema), companies.addCompany);
 
-router.get('/companyWithName',auth, role(roles), companies.companyWithName);
+router.get('/search',auth, role(roles), companies.companyWithName);
 
 router.get('/applications',auth, role(["company_HR"]), companies.applications);
 
-router.put('/updateCompany/:id',auth, role(["company_HR"]), validation(updateCompanySchema), companies.updateCompany);
+router.put('/update/:id',auth, role(["company_HR"]), validation(updateCompanySchema), companies.updateCompany);
 
-router.delete('/deleteCompany/:id',auth, role(["company_HR"]), companies.deleteCompany);
+router.delete('/delete/:id',auth, role(["company_HR"]), companies.deleteCompany);
 
-router.get('/getCompany/:id',auth, role(["company_HR"]), companies.getCompany);
+router.get('/get/:id',auth, role(["company_HR"]), companies.getCompany);
 
 export default router

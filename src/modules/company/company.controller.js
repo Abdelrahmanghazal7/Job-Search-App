@@ -8,15 +8,15 @@ import { asyncHandler } from "../../utils/globalErrorHandling.js";
 
 export const addCompany = asyncHandler(async (req, res, next) => {
   req.body.companyHR = req.user._id;
-  let company = await companyModel.create(req.body);
+  const company = await companyModel.create(req.body);
   return res.status(201).json({ msg: "Company added successfully", company });
 });
 
 // =========================================== UPDATE COMPANY ===========================================
 
 export const updateCompany = asyncHandler(async (req, res, next) => {
-  let id = req.params.id;
-  let company = await companyModel.findById(id);
+  const id = req.params.id;
+  const company = await companyModel.findById(id);
   if (!company) {
     return next(new AppError("Company not found", 404));
   }
@@ -30,8 +30,8 @@ export const updateCompany = asyncHandler(async (req, res, next) => {
 // =========================================== DELETE COMPANY ===========================================
 
 export const deleteCompany = asyncHandler(async (req, res, next) => {
-  let id = req.params.id;
-  let company = await companyModel.findById(id);
+  const id = req.params.id;
+  const company = await companyModel.findById(id);
   if (!company) {
     return next(new AppError("Company not found", 404));
   }
@@ -46,8 +46,8 @@ export const deleteCompany = asyncHandler(async (req, res, next) => {
 // =========================================== GET COMPANY ===========================================
 
 export const getCompany = asyncHandler(async (req, res, next) => {
-  let id = req.params.id;
-  let company = await companyModel.findById(id);
+  const id = req.params.id;
+  const company = await companyModel.findById(id);
   if (!company) {
     return next(new AppError("Company not found", 404));
   }
@@ -56,18 +56,18 @@ export const getCompany = asyncHandler(async (req, res, next) => {
     return next(new AppError("unauthrezied", 401));
   }
 
-  let jops = await jopModel.find({ addedBy: company.companyHR });
+  const jops = await jopModel.find({ addedBy: company.companyHR });
   return res
     .status(200)
-    .json({ msg: "Company deleted successfully", company, jops });
+    .json({ msg: "done", company, jops });
 });
 
 // =========================================== GET COMPANY BY NAME ===========================================
 
 export const companyWithName = asyncHandler(async (req, res, next) => {
-  let name = req.query.name;
-  let company = await companyModel.find({});
-  let companies = company.filter((c) =>
+  const {name} = req.query;
+  const company = await companyModel.find({});
+  const companies = company.filter((c) =>
     c.companyName.toLowerCase().includes(name.toLowerCase())
   );
   res.status(200).json({ msg: "Company", companies });
@@ -76,8 +76,8 @@ export const companyWithName = asyncHandler(async (req, res, next) => {
 // =========================================== GET APPLICATIONS ===========================================
 
 export const applications = asyncHandler(async (req, res, next) => {
-  let company = await companyModel.findOne({ companyHR: req.user._id });
-  let applications = await applicationModel
+  const company = await companyModel.findOne({ companyHR: req.user._id });
+  const applications = await applicationModel
     .find({ combanyId: company._id })
     .populate("userId");
   res.status(200).json({ msg: "Applications", applications });
