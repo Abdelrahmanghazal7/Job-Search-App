@@ -29,7 +29,7 @@ export const updateJob = asyncHandler(async (req, res, next) => {
 export const deleteJob = asyncHandler(async (req, res, next) => {
   const {id} = req.params;
   const job = await jobModel.findByIdAndDelete(id);
-  return res.status(201).json(job);
+  return res.status(201).json("job deleted");
 });
 
 // =========================================== GET ALL JOBS ===========================================
@@ -50,31 +50,37 @@ export const getCompanyJobs = asyncHandler(async (req, res, next) => {
 // =========================================== GET FILTERED JOB ===========================================
 
 export const getFilteredJobs = asyncHandler(async (req, res, next) => {
-  const query = req.query;
-  const jobs = await jobModel.find(query);
+  const {title} = req.query;
+  const job = await jobModel.find({});
+  const jobs = job.filter((j) =>
+    j.jopTitle.toLowerCase().includes(title.toLowerCase())
+  );
+
+  if (jobs.length < 1) return next(new AppError("Couldn't find jobs", 404));
+
   return res.status(201).json(jobs);
 });
 
 // =========================================== APPLY JOB ===========================================
 
 export const applyJob = asyncHandler(async (req, res, next) => {
-  const jobId = req.params.jobid;
+  const {jobId} = req.params;
   const userId = req.user._id;
   const job = await jobModel.findById(jobId);
   const companyId = job.company;
   const data = await cloudinary.uploader.upload(req.file.path, {
     folder: "cvs",
-    resource_type: "raw",
+    resource_type: "pdf",
   });
-  const userResume = data.secure_url;
+  const userResumeUrl = data.secure_url;
   const { userTechSkills, userSoftSkills } = req.body;
   const application = await applicationModel.create({
     jobId,
-    companyId,
     userId,
+    companyId,
     userTechSkills,
     userSoftSkills,
-    userResume,
+    userResumeUrl,
   });
   return res.status(201).json({ msg: "done", application });
 });

@@ -24,7 +24,7 @@ const applicationSchema = Schema({
     type: [String],
     required: true,
   },
-  userResume: {
+  userResumeUrl: {
     type: String,
     required: true,
   },

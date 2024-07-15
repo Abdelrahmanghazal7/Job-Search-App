@@ -4,14 +4,21 @@ import joi from "joi";
 
 export const signUpValidation = {
   body: joi.object({
-    username: joi.string().required(),
+    firstName: joi.string().min(3).max(30).required(),
+    lastName: joi.string().min(3).max(30).required(),
     email: joi.string().email().required(),
-    password: joi.string().required(),
+    password: joi
+      .string()
+      .required()
+      .pattern(new RegExp(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/))
+      .messages({
+        "string.pattern.base":
+          "Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, one number, and one special character",
+      }),
     recoveryEmail: joi.string(),
-    DOB: joi.date().iso().required(),
+    dateOfBirth: joi.date().iso().required(),
     mobileNumber: joi.number(),
-    role: joi.string().valid("User", "Company_HR").required(),
-    status: joi.string().valid("online", "offline"),
+    role: joi.string().valid("user", "company_HR").required(),
   }),
 };
 
@@ -23,6 +30,10 @@ export const signInValidation = {
     password: joi
       .string()
       .pattern(new RegExp(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/))
+      .messages({
+        "string.pattern.base":
+          "Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, one number, and one special character",
+      })
       .required(),
   }),
 };
@@ -34,12 +45,7 @@ export const updatePasswordValidation = {
     currentPassword: joi.string().required(),
     newPassword: joi
       .string()
-      .min(8)
-      .pattern(
-        new RegExp(
-          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
-        )
-      )
+      .pattern(new RegExp(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/))
       .required()
       .messages({
         "string.pattern.base":
@@ -52,15 +58,10 @@ export const updatePasswordValidation = {
 
 export const resetPasswordValidation = {
   body: joi.object({
-    identifier: joi.string().email().required(),
+    email: joi.string().email().required(),
     newPassword: joi
       .string()
-      .min(8)
-      .pattern(
-        new RegExp(
-          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
-        )
-      )
+      .pattern(new RegExp(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/))
       .required()
       .messages({
         "string.pattern.base":

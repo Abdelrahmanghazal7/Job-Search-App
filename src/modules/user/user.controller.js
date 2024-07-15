@@ -25,19 +25,22 @@ const registration = async (req, res, next) => {
   const userExist = await userModel.findOne({
     $or: [{ email }, { recoveryEmail }],
   });
-  if (userExist) {
-    return next(new AppError("user already exist", 400));
-  }
+
+  userExist && next(new AppError("user already exist", 400));
 
   // Send email to confirm signing
   const token = jwt.sign({ email }, process.env.JWT_SECRET);
-  const link = `http://localhost:3000/users/confirmEmail/${token}`;
+  const link = `${req.protocol}://${req.headers.host}/users/confirmEmail/${token}`;
+
+  const rftoken = jwt.sign({ email }, process.env.JWT_SECRET);
+  const rflink = `${req.protocol}://${req.headers.host}/users/RefreshToken/${rftoken}`;
 
   const checkSendEmail = await sendEmail(
     email,
     "hi",
-    `<a href=${link}>Confirm Email</a>`
+    `<a href=${link}>Confirm Email</a> <br> <a href=${rflink}>click here to resend the link</a>`
   );
+
   if (!checkSendEmail) {
     return next(new AppError("email not send", 400));
   }
@@ -49,7 +52,6 @@ const registration = async (req, res, next) => {
   const user = await userModel.create({
     firstName,
     lastName,
-    username: firstName + " " + lastName,
     email,
     password: hash,
     recoveryEmail,
@@ -77,12 +79,41 @@ const confirm = async (req, res, next) => {
     { new: true }
   );
   if (!user) {
-    return next(new AppError("user not found or already confirmed", 400));
+    return next(new AppError("user already confirmed", 400));
   }
-  res.status(200).json({ msg: "done", user });
+  res.status(200).json({ msg: "Email Confirmed" });
 };
 
 export const confirmEmail = asyncHandler(confirm);
+
+// =========================================== REFRESH TOKEN ===========================================
+
+const refresh = async (req, res, next) => {
+  const { rfToken } = req.params;
+  const decoded = jwt.verify(rfToken, process.env.JWT_SECRET);
+  if (!decoded?.email) return next(new AppError("invalid token", 400));
+
+  const user = await userModel.findOne({
+    email: decoded.email,
+    confirmed: true,
+  });
+
+  if (user) {
+    return next(new AppError("user already confirmed", 400));
+  }
+
+  const token = jwt.sign({ email: decoded.email }, process.env.JWT_SECRET);
+  const link = `${req.protocol}://${req.headers.host}/users/confirmEmail/${token}`;
+
+  await sendEmail(
+    decoded.email,
+    "verify your email",
+    `<a href=${link}>click here</a>`
+  );
+  res.status(200).json({ msg: "done" });
+};
+
+export const refreshToken = asyncHandler(refresh);
 
 // =========================================== LOGIN ===========================================
 
@@ -102,16 +133,14 @@ const login = async (req, res, next) => {
   }
 
   // Compare passwords
-  if (!bcrypt.compareSync(password, userModel.password)) {
+  if (!bcrypt.compareSync(password, user.password)) {
     return next(new AppError("password incorrect", 400));
   }
 
   // Generate JWT token
   const payload = {
-    user: {
-      id: user._id,
-      email,
-    },
+    id: user._id,
+    email: user.email,
   };
   const token = jwt.sign(payload, process.env.JWT_SECRET);
   res.status(200).json({ token });
@@ -125,14 +154,7 @@ export const signIn = asyncHandler(login);
 // =========================================== UPDATE USER ===========================================
 
 const update = async (req, res, next) => {
-  const {
-    firstName,
-    lastName,
-    email,
-    mobileNumber,
-    recoveryEmail,
-    dateOfBirth,
-  } = req.body;
+  const { email, mobileNumber } = req.body;
 
   const emailExist = await userModel.findOne({ email });
   if (emailExist) {
@@ -144,18 +166,9 @@ const update = async (req, res, next) => {
     next(new AppError("Mobile Number already exists", 400));
   }
 
-  const data = await userModel.findByIdAndUpdate(
-    req.user.id,
-    {
-      firstName,
-      lastName,
-      email,
-      mobileNumber,
-      recoveryEmail,
-      dateOfBirth: new Date(dateOfBirth),
-    },
-    { new: true }
-  );
+  const data = await userModel.findByIdAndUpdate(req.user.id, req.body, {
+    new: true,
+  });
   if (!data) {
     next(new AppError("User not found", 404));
   }
@@ -228,55 +241,56 @@ export const updatePassword = asyncHandler(async (req, res, next) => {
 // =========================================== FORGET PASSWORD ===========================================
 
 export const forgetPassword = asyncHandler(async (req, res, next) => {
-  const { identifier, newPassword } = req.body;
+  const { email, newPassword } = req.body;
 
-  // Find user by email, recoveryEmail, or mobileNumber
-  let user = await userModel.findOne({
-    $or: [
-      { email: identifier },
-      { recoveryEmail: identifier },
-      { mobileNumber: identifier },
-    ],
-  });
+  let user = await userModel.findOne({ email });
 
   if (!user) {
-    return res.status(404).json({ error: "User not found." });
-  }
-
-  await userModel.findOneAndUpdate(
-    {
-      $or: [
-        { email: identifier },
-        { recoveryEmail: identifier },
-        { mobileNumber: identifier },
-      ],
-    },
-    { confirmed: false },
-    { new: true }
-  );
-
-  // Send email to confirm signing
-  const token = jwt.sign({ email }, process.env.JWT_SECRET);
-  const link = `http://localhost:3000/users/confirmEmail/${token}`;
-
-  const checkSendEmail = await sendEmail(
-    email,
-    "hi",
-    `<a href=${link}>Confirm Email</a>`
-  );
-  if (!checkSendEmail) {
-    return next(new AppError("email not send", 400));
+    return res.status(404).json({ error: "User not found" });
   }
 
   // Hash the new password
   const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-  // Update password
-  req.user.password = hashedPassword;
-  await req.user.save();
+  const payload = {
+    email,
+    hashedPassword,
+  };
 
-  res.json({ message: "Password reset successfully." });
+  // Send email to confirm signing
+  const forgetToken = jwt.sign(payload, process.env.JWT_SECRET);
+  const link = `${req.protocol}://${req.headers.host}/users/forgetPassword/${forgetToken}`;
+
+  const checkSendEmail = await sendEmail(
+    email,
+    "hi",
+    `<a href=${link}>Confirm Email to reset password</a>`
+  );
+
+  if (!checkSendEmail) {
+    return next(new AppError("email not send", 400));
+  }
+
+  res.status(200).json({ msg: "email was sent confirm it to reset password" });
 });
+
+// =========================================== FORGET EMAIL ===========================================
+
+const forget = async (req, res, next) => {
+  const { forgetToken } = req.params;
+
+  const decoded = jwt.verify(forgetToken, process.env.JWT_SECRET);
+
+  const reset = await userModel.findOneAndUpdate(
+    { email: decoded.email },
+    { password: decoded.hashedPassword },
+    { new: true }
+  );
+
+  res.status(200).json({ msg: "Password reset successfully" });
+};
+
+export const forgetToken = asyncHandler(forget);
 
 // =========================================== GET ALL USERS RECOVERY EMAIL ===========================================
 

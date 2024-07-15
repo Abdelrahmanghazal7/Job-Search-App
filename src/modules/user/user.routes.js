@@ -12,16 +12,20 @@ router.post("/signIn", validation(signInValidation), users.signIn);
 
 router.get("/confirmEmail/:token", users.confirmEmail);
 
-router.put('/update',auth, users.updateUser)
+router.get("/refreshToken/:rfToken", users.refreshToken);
+
+router.get("/forgetPassword/:forgetToken", users.forgetToken);
+
+router.put('/update', auth, users.updateUser)
 
 router.put('/updatePassword', auth, validation(updatePasswordValidation), users.updatePassword)
 
 router.delete('/delete', auth, users.deleteUser)
 
-router.get('/getOtherData/:id', auth, users.getUserData)
+router.get('/getUser/:id', auth, users.getUserData)
 
-router.post('/forgetPassword/', validation(resetPasswordValidation), users.forgetPassword)
+router.put('/forgetPassword', validation(resetPasswordValidation), users.forgetPassword)
 
-router.post('/recoveryEmail', auth, users.GetAllRecoveryEmail)
+router.get('/recoveryEmail', auth, users.GetAllRecoveryEmail)
 
 export default router;

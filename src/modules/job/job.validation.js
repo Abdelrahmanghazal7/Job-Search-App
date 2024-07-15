@@ -10,7 +10,7 @@ const objectIdValidator = (value, helpers) => {
 
 export const addJobSchema = {
   body: joi.object({
-    jobTitle: joi.string().min(5).max(100).required(),
+    jopTitle: joi.string().required(),
     jobLocation: joi.string().valid("onsite", "remotely", "hybrid ").required(),
     workingTime: joi.string().valid("full-time", "part-time").required(),
     seniorityLevel: joi
@@ -25,7 +25,7 @@ export const addJobSchema = {
 
 export const updateJobSchema = {
   body: joi.object({
-    jobTitle: joi.string().min(5).max(100),
+    jopTitle: joi.string(),
     jobLocation: joi.string().valid("onsite", "remotely", "hybrid "),
     workingTime: joi.string().valid("full-time", "part-time"),
     seniorityLevel: joi

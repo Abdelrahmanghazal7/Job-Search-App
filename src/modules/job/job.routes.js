@@ -17,10 +17,10 @@ router.delete("/delete/:id", auth, role(["company_HR"]), jobs.deleteJob);
 
 router.get("/all", auth, role(roles), jobs.getAllJobs);
 
-router.get("/comapny/:id", auth, role(roles), jobs.getCompanyJobs);
+router.get("/company/:id", auth, role(roles), jobs.getCompanyJobs);
 
 router.get("/filter", auth, role(roles), jobs.getFilteredJobs);
 
-router.post("/applay/:jobid", auth, role(["user"]), multerHost().single("cv"), jobs.applyJob);
+router.post("/apply/:jobId", auth, role(["user"]), multerHost().single("cv"), jobs.applyJob);
 
 export default router;

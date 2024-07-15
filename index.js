@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import express from "express";
 import userRouter from "./src/modules/user/user.routes.js";
 import jobRouter from "./src/modules/job/job.routes.js";
@@ -6,8 +8,6 @@ import applicationRouter from "./src/modules/application/application.routes.js";
 import connectionDB from "./db/connectionDB.js";
 import { AppError } from "./src/utils/classError.js";
 import { globalErrorHandling } from "./src/utils/globalErrorHandling.js";
-import dotenv from 'dotenv';
-dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
