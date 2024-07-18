@@ -1,15 +1,21 @@
 import multer from "multer";
 import { AppError } from "../../../utils/classError.js";
 
-export const multerHost = () => {
+export const validExtension = {
+  pdf:["application/pdf"]
+}
+
+export const multerHost = (customValidation = validExtension.pdf) => {
+ 
   const storage = multer.diskStorage({});
+
   const fileFilter = function (req, file, cb) {
-    if (file.mimetype === "application/pdf") {
+    if (customValidation.includes(file.mimetype)) {
       return cb(null, true);
     }
-    cb(new AppError("file not supported"), 500);
+    cb(new AppError("file not supported"), false);
   };
 
-  const upload = multer({ storage, fileFilter });
+  const upload = multer({ fileFilter, storage });
   return upload;
 };

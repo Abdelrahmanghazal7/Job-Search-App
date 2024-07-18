@@ -4,7 +4,7 @@ import { auth } from "../../middleware/auth.js";
 import role from "../../middleware/role.js";
 import { addJobSchema, updateJobSchema } from "./job.validation.js";
 import { validation } from "../../middleware/validation.js";
-import { multerHost } from "./cloudinary/multer.js";
+import { multerHost, validExtension } from "./cloudinary/multer.js";
 
 let roles = ["user", "company_HR"];
 let router = Router();
@@ -21,6 +21,6 @@ router.get("/company/:id", auth, role(roles), jobs.getCompanyJobs);
 
 router.get("/filter", auth, role(roles), jobs.getFilteredJobs);
 
-router.post("/apply/:jobId", auth, role(["user"]), multerHost().single("cv"), jobs.applyJob);
+router.post("/apply/:jobId", auth, role(["user"]), multerHost(validExtension.pdf).single("cv"), jobs.applyJob);
 
 export default router;

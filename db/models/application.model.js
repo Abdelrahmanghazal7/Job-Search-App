@@ -24,9 +24,9 @@ const applicationSchema = Schema({
     type: [String],
     required: true,
   },
-  userResumeUrl: {
-    type: String,
-    required: true,
+  userResume: {
+    secure_url: String,
+    public_id: String,
   },
 });
 

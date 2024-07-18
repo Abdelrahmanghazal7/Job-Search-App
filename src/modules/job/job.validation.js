@@ -38,7 +38,7 @@ export const updateJobSchema = {
   }),
 };
 
-export const applayJobSchema = {
+export const applyJobSchema = {
   body: joi.object({
     userSoftSkills: joi.array().items(joi.string().required()).required(),
     userTechSkills: joi.array().items(joi.string().required()).required(),

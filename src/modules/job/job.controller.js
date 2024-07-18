@@ -64,23 +64,30 @@ export const getFilteredJobs = asyncHandler(async (req, res, next) => {
 // =========================================== APPLY JOB ===========================================
 
 export const applyJob = asyncHandler(async (req, res, next) => {
+
+  const { userTechSkills, userSoftSkills } = req.body;
   const {jobId} = req.params;
   const userId = req.user._id;
   const job = await jobModel.findById(jobId);
   const companyId = job.company;
-  const data = await cloudinary.uploader.upload(req.file.path, {
+
+  const {secure_url, public_id} = await cloudinary.uploader.upload(req.file.path, {
     folder: "cvs",
-    resource_type: "pdf",
+    resource_type: 'raw',
   });
-  const userResumeUrl = data.secure_url;
-  const { userTechSkills, userSoftSkills } = req.body;
+  
+  if (!req.file) {
+    return next(new AppError("no file uploaded", 400))
+  }
+
   const application = await applicationModel.create({
     jobId,
     userId,
     companyId,
     userTechSkills,
     userSoftSkills,
-    userResumeUrl,
+    userResume: {secure_url, public_id}
   });
+  
   return res.status(201).json({ msg: "done", application });
 });
