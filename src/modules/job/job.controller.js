@@ -3,7 +3,7 @@ import companyModel from "../../../db/models/company.model.js";
 import jobModel from "../../../db/models/job.model.js";
 import { AppError } from "../../utils/classError.js";
 import { asyncHandler } from "../../utils/globalErrorHandling.js";
-import cloudinary from "./cloudinary/cloudinary.js";
+import cloudinary from "../../service/cloudinary.js";
 
 // =========================================== ADD JOB ===========================================
 
@@ -53,7 +53,7 @@ export const getFilteredJobs = asyncHandler(async (req, res, next) => {
   const {title} = req.query;
   const job = await jobModel.find({});
   const jobs = job.filter((j) =>
-    j.jopTitle.toLowerCase().includes(title.toLowerCase())
+    j.jobTitle.toLowerCase().includes(title.toLowerCase())
   );
 
   if (jobs.length < 1) return next(new AppError("Couldn't find jobs", 404));
@@ -65,15 +65,14 @@ export const getFilteredJobs = asyncHandler(async (req, res, next) => {
 
 export const applyJob = asyncHandler(async (req, res, next) => {
 
-  const { userTechSkills, userSoftSkills } = req.body;
   const {jobId} = req.params;
   const userId = req.user._id;
+  const { userTechSkills, userSoftSkills } = req.body;
   const job = await jobModel.findById(jobId);
   const companyId = job.company;
 
   const {secure_url, public_id} = await cloudinary.uploader.upload(req.file.path, {
     folder: "cvs",
-    resource_type: 'raw',
   });
   
   if (!req.file) {

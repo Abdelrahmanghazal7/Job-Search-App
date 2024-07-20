@@ -1,6 +1,6 @@
 import userModel from "../../../db/models/user.model.js";
 import companyModel from "../../../db/models/company.model.js";
-import jopModel from "../../../db/models/job.model.js";
+import jobModel from "../../../db/models/job.model.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { sendEmail } from "../../service/sendEmail.js";
@@ -189,7 +189,7 @@ export const deleteUser = asyncHandler(async (req, res, next) => {
 
   if (user.role == "company_HR") {
     await companyModel.findOneAndDelete({ companyHR: user.id }); // delete his company
-    await jopModel.deleteMany({ addedBy: req.user.id }); // delete related jobs
+    await jobModel.deleteMany({ addedBy: req.user.id }); // delete related jobs
   }
 
   res.json({ message: "User deleted successfully." });

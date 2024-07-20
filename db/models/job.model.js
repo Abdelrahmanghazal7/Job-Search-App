@@ -1,7 +1,7 @@
 import { Schema, model } from "mongoose";
 
 const jobSchema = Schema({
-  jopTitle: {
+  jobTitle: {
     type: String,
     required: true,
   },

@@ -9,19 +9,14 @@ export const getApps = asyncHandler(async (req, res, next) => {
       created_at: doc.createdAt,
       updated_at: doc.updatedAt,
       userResume: doc.userResume,
+      _id : doc._id.toString(),
+      jobId : doc.jobId.toString(),
+      companyId : doc.companyId.toString(),
+      userId : doc.userId.toString(),
+      techSkills: doc.userTechSkills.join(", "),
+      softSkills: doc.userSoftSkills.join(", "),
     };
 
-    result._id = doc._id.toString();
-    result.jopId = doc.jopId.toString();
-    result.companyId = doc.companyId.toString();
-    result.userId = doc.userId.toString();
-
-    doc.userTechSkills.map((skill) => {
-      result[`techSkill`] = skill;
-    });
-    doc.userSoftSkills.map((skill) => {
-      result[`softSkill`] = skill;
-    });
     return result;
   });
 
@@ -30,9 +25,7 @@ export const getApps = asyncHandler(async (req, res, next) => {
   xlsx.utils.book_append_sheet(wb, ws, "apps");
   const buffer = xlsx.write(wb, { type: "buffer", bookType: "xlsx" });
   res.setHeader("Content-Disposition", "attachment; filename=output.xlsx");
-  res.setHeader(
-    "Content-Type",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
   );
-  return res.send(buffer).json({ msg: "done" });
+   res.send(buffer).json({ msg: "done" });
 });

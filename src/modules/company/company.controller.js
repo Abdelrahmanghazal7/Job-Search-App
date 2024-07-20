@@ -1,5 +1,5 @@
 import companyModel from "../../../db/models/company.model.js";
-import jopModel from "../../../db/models/job.model.js";
+import jobModel from "../../../db/models/job.model.js";
 import applicationModel from "../../../db/models/application.model.js";
 import { AppError } from "../../utils/classError.js";
 import { asyncHandler } from "../../utils/globalErrorHandling.js";
@@ -43,7 +43,7 @@ export const deleteCompany = asyncHandler(async (req, res, next) => {
   const deleteC = await companyModel.findByIdAndDelete(id, req.body, {
     new: true,
   });
-  await jopModel.deleteMany({ company: company.id }); // delete related jops
+  await jobModel.deleteMany({ company: company.id }); // delete related jobs
   return res.status(200).json({ msg: "Company deleted successfully", deleteC });
 });
 
@@ -60,8 +60,8 @@ export const getCompany = asyncHandler(async (req, res, next) => {
     return next(new AppError("unauthrezied", 401));
   }
 
-  const jops = await jopModel.find({ addedBy: company.companyHR });
-  return res.status(200).json({ msg: "done", company, jops });
+  const jobs = await jobModel.find({ addedBy: company.companyHR });
+  return res.status(200).json({ msg: "done", company, jobs });
 });
 
 // =========================================== GET COMPANY BY NAME ===========================================

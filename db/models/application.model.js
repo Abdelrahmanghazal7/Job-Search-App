@@ -1,7 +1,7 @@
 import { Schema, model } from "mongoose";
 
 const applicationSchema = Schema({
-  jopId: {
+  jobId: {
     type: Schema.Types.ObjectId,
     ref: "job",
     required: true,

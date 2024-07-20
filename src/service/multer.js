@@ -1,11 +1,11 @@
 import multer from "multer";
-import { AppError } from "../../../utils/classError.js";
+import { AppError } from "../utils/classError.js";
 
 export const validExtension = {
   pdf:["application/pdf"]
 }
 
-export const multerHost = (customValidation = validExtension.pdf) => {
+export const multerHost = (customValidation) => {
  
   const storage = multer.diskStorage({});
 

@@ -1,4 +1,5 @@
 import { Schema, model } from "mongoose";
+import { systemRoles } from "../../src/utils/systemRoles.js";
 
 const userSchema = Schema({
   firstName: {
@@ -36,9 +37,8 @@ const userSchema = Schema({
   },
   role: {
     type: String,
-    enum: ["user", "company_HR"],
+    enum: Object.values(systemRoles),
     default: "user",
-    required: true,
   },
   status: {
     type: String,
